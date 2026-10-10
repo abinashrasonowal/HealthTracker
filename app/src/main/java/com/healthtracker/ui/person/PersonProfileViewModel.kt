@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.healthtracker.data.SettingsRepository
 import com.healthtracker.data.local.HealthRecord
 import com.healthtracker.data.local.Medication
 import com.healthtracker.data.local.Note
@@ -22,11 +23,13 @@ import com.healthtracker.domain.buildTimeline
 import com.healthtracker.domain.isMedicationActive
 import com.healthtracker.ui.appViewModelFactory
 import com.healthtracker.ui.navigation.PersonProfileRoute
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -90,6 +93,7 @@ class PersonProfileViewModel(
     recordRepository: HealthRecordRepository,
     noteRepository: NoteRepository,
     medicationRepository: MedicationRepository,
+    settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     val personId = savedStateHandle.toRoute<PersonProfileRoute>().personId
@@ -138,6 +142,7 @@ class PersonProfileViewModel(
             val zone = ZoneId.systemDefault()
             buildTimeline(entries) { it.dateTime.atZone(zone).toLocalDate() }
         }
+        .flowOn(Dispatchers.Default) // sorting and grouping thousands of entries
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** null while loading. */
@@ -159,16 +164,22 @@ class PersonProfileViewModel(
             if (type == null) {
                 flowOf(null)
             } else {
-                combine(recordRepository.observeHistory(personId, listOf(type)), trendRange) { records, range ->
+                combine(
+                    recordRepository.observeHistory(personId, listOf(type)),
+                    trendRange,
+                    settingsRepository.settings,
+                ) { records, range, settings ->
                     Trends.build(
                         type,
                         records.map { TrendInput(it.dateTime, it.value1, it.value2, it.unit) },
                         range,
                         Instant.now(),
+                        settings.preferredUnit(type),
                     )
                 }
             }
         }
+        .flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun setTrendType(type: RecordType) {
@@ -194,7 +205,7 @@ class PersonProfileViewModel(
         private const val KEY_TREND_RANGE = "trendRange"
 
         val Factory = appViewModelFactory { c, handle ->
-            PersonProfileViewModel(handle, c.personRepository, c.recordRepository, c.noteRepository, c.medicationRepository)
+            PersonProfileViewModel(handle, c.personRepository, c.recordRepository, c.noteRepository, c.medicationRepository, c.settingsRepository)
         }
     }
 }

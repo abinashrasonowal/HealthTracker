@@ -35,17 +35,23 @@ data class Trend(
 object Trends {
 
     /**
-     * Readings of one [type] inside the last [range], converted to a single unit (that of
-     * the newest reading) so a mix of kg and lb, say, still plots on one axis.
-     * Returns null when there are no readings in range.
+     * Readings of one [type] inside the last [range], converted to a single unit so a mix of
+     * kg and lb, say, still plots on one axis: [preferredUnit] when it applies to [type],
+     * otherwise the newest reading's unit. Returns null when there are no readings in range.
      */
-    fun build(type: RecordType, readings: List<TrendInput>, range: TrendRange, now: Instant): Trend? {
+    fun build(
+        type: RecordType,
+        readings: List<TrendInput>,
+        range: TrendRange,
+        now: Instant,
+        preferredUnit: MeasureUnit? = null,
+    ): Trend? {
         val start = now.minus(Duration.ofDays(range.days))
         val inRange = readings.filter { !it.dateTime.isBefore(start) && !it.dateTime.isAfter(now) }
             .sortedBy { it.dateTime }
         if (inRange.isEmpty()) return null
 
-        val unit = inRange.last().unit
+        val unit = preferredUnit?.takeIf { it in type.spec.units } ?: inRange.last().unit
         val twoSeries = type == RecordType.BLOOD_PRESSURE
         val points = inRange.mapNotNull { r ->
             val v1 = convert(r.value1, r.unit, unit)

@@ -31,6 +31,16 @@ interface PersonDao {
     @Insert
     suspend fun insert(person: Person): Long
 
+    @Insert
+    suspend fun insertAll(people: List<Person>)
+
+    @Query("SELECT * FROM people ORDER BY id")
+    suspend fun getAll(): List<Person>
+
+    /** Records, notes and medications go with them (foreign-key cascade). */
+    @Query("DELETE FROM people")
+    suspend fun deleteAll()
+
     @Update
     suspend fun update(person: Person)
 

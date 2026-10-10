@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,6 +52,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -82,6 +85,7 @@ private val FabClearance = 112.dp
 fun PersonProfileScreen(
     onBack: () -> Unit,
     onEditPerson: (Long) -> Unit,
+    onExport: (Long) -> Unit,
     onSwitchPerson: (Long) -> Unit,
     onAddRecord: (personId: Long, type: RecordType) -> Unit,
     onAddNote: (personId: Long) -> Unit,
@@ -112,6 +116,9 @@ fun PersonProfileScreen(
                     },
                     actions = {
                         if (loaded != null) {
+                            IconButton(onClick = { onExport(loaded.person.id) }) {
+                                Icon(Icons.Filled.IosShare, contentDescription = "Export records")
+                            }
                             IconButton(onClick = { onEditPerson(loaded.person.id) }) {
                                 Icon(Icons.Filled.Edit, contentDescription = "Edit person")
                             }
@@ -141,6 +148,8 @@ fun PersonProfileScreen(
                     onClick = onClick,
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     text = { Text(label) },
+                    // The label inside isn't exposed to screen readers on its own; name the button explicitly.
+                    modifier = Modifier.semantics { contentDescription = label },
                 )
             }
         },

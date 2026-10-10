@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,6 +35,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -50,6 +53,7 @@ fun PeopleScreen(
     onPersonClick: (Long) -> Unit,
     onAddPerson: () -> Unit,
     onSearch: () -> Unit,
+    onSettings: () -> Unit,
     viewModel: PeopleViewModel = viewModel(factory = PeopleViewModel.Factory),
 ) {
     val people by viewModel.people.collectAsStateWithLifecycle()
@@ -64,6 +68,9 @@ fun PeopleScreen(
                     IconButton(onClick = onSearch) {
                         Icon(Icons.Filled.Search, contentDescription = "Search records")
                     }
+                    IconButton(onClick = onSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                    }
                 },
                 scrollBehavior = scrollBehavior,
             )
@@ -73,6 +80,8 @@ fun PeopleScreen(
                 onClick = onAddPerson,
                 icon = { Icon(Icons.Filled.PersonAdd, contentDescription = null) },
                 text = { Text("Add Person") },
+                // The label inside isn't exposed to screen readers on its own; name the button explicitly.
+                modifier = Modifier.semantics { contentDescription = "Add Person" },
             )
         },
     ) { padding ->

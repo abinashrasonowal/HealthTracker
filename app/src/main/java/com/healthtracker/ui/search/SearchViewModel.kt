@@ -9,11 +9,13 @@ import com.healthtracker.data.repository.HealthRecordRepository
 import com.healthtracker.data.repository.NoteRepository
 import com.healthtracker.domain.RecordSearch
 import com.healthtracker.ui.appViewModelFactory
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
 import java.time.ZoneId
@@ -74,7 +76,8 @@ class SearchViewModel(
             }.map(SearchHit::NoteHit)
             SearchResults(q, (recordHits + noteHits).sortedByDescending { it.dateTime })
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchResults("", null))
+    }.flowOn(Dispatchers.Default) // matching thousands of records must not block the UI thread
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchResults("", null))
 
     fun onQueryChange(value: String) {
         savedStateHandle[KEY_QUERY] = value

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.healthtracker.ui.export.ExportScreen
 import com.healthtracker.ui.medication.MedicationDetailScreen
 import com.healthtracker.ui.medication.MedicationEditScreen
 import com.healthtracker.ui.note.NoteDetailScreen
@@ -14,6 +15,7 @@ import com.healthtracker.ui.person.PersonProfileScreen
 import com.healthtracker.ui.record.RecordDetailScreen
 import com.healthtracker.ui.record.RecordEditScreen
 import com.healthtracker.ui.search.SearchScreen
+import com.healthtracker.ui.settings.SettingsScreen
 
 @Composable
 fun AppNavHost() {
@@ -24,7 +26,14 @@ fun AppNavHost() {
                 onPersonClick = { nav.navigate(PersonProfileRoute(it)) },
                 onAddPerson = { nav.navigate(PersonEditRoute()) },
                 onSearch = { nav.navigate(SearchRoute) },
+                onSettings = { nav.navigate(SettingsRoute) },
             )
+        }
+        composable<SettingsRoute> {
+            SettingsScreen(onBack = { nav.popBackStack() }, onExport = { nav.navigate(ExportRoute()) })
+        }
+        composable<ExportRoute> {
+            ExportScreen(onBack = { nav.popBackStack() })
         }
         composable<SearchRoute> {
             SearchScreen(
@@ -49,6 +58,7 @@ fun AppNavHost() {
             PersonProfileScreen(
                 onBack = { nav.popBackStack() },
                 onEditPerson = { nav.navigate(PersonEditRoute(it)) },
+                onExport = { nav.navigate(ExportRoute(it)) },
                 onSwitchPerson = { id ->
                     nav.navigate(PersonProfileRoute(id)) {
                         popUpTo<PersonProfileRoute> { inclusive = true }

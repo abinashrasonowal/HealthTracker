@@ -84,6 +84,8 @@ fun TrendsContent(
                         selected = r == range,
                         onClick = { onRangeChange(r) },
                         shape = SegmentedButtonDefaults.itemShape(i, TrendRange.entries.size),
+                        // The fill shows the selection; a tick would only steal width from the label.
+                        icon = {},
                     ) { Text(r.label) }
                 }
             }

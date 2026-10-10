@@ -37,6 +37,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -55,6 +58,7 @@ import com.healthtracker.domain.FieldSpec
 import com.healthtracker.domain.SugarContext
 import com.healthtracker.domain.spec
 import com.healthtracker.ui.components.DateField
+import com.healthtracker.ui.components.FieldPair
 import com.healthtracker.ui.components.TimeField
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -89,7 +93,14 @@ fun RecordEditScreen(
         val spec = state.type.spec
         val focusManager = LocalFocusManager.current
         val firstField = remember { FocusRequester() }
-        LaunchedEffect(Unit) { if (state.isNew) firstField.requestFocus() }
+        // Focus the first field once; not again after a rotation, which would move the cursor back.
+        var focused by rememberSaveable { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            if (state.isNew && !focused) {
+                firstField.requestFocus()
+                focused = true
+            }
+        }
 
         Column(
             modifier = Modifier
@@ -160,21 +171,18 @@ fun RecordEditScreen(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                DateField(
-                    label = "Date",
-                    date = state.date,
-                    onDateChange = viewModel::onDateChange,
-                    error = state.errors[Field.DATE_TIME],
-                    modifier = Modifier.weight(1f),
-                )
-                TimeField(
-                    label = "Time",
-                    time = state.time,
-                    onTimeChange = viewModel::onTimeChange,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            FieldPair(
+                {
+                    DateField(
+                        label = "Date",
+                        date = state.date,
+                        onDateChange = viewModel::onDateChange,
+                        error = state.errors[Field.DATE_TIME],
+                        modifier = it,
+                    )
+                },
+                { TimeField(label = "Time", time = state.time, onTimeChange = viewModel::onTimeChange, modifier = it) },
+            )
 
             OutlinedTextField(
                 value = state.note,

@@ -7,12 +7,14 @@ import androidx.navigation.toRoute
 import com.healthtracker.data.local.Note
 import com.healthtracker.data.repository.NoteRepository
 import com.healthtracker.ui.appViewModelFactory
+import com.healthtracker.ui.savedForm
 import com.healthtracker.ui.navigation.NoteEditRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.Serializable
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -29,7 +31,7 @@ data class NoteEditState(
     val time: LocalTime = LocalTime.now().truncatedTo(ChronoUnit.MINUTES),
     val titleError: String? = null,
     val done: Boolean = false,
-)
+) : Serializable
 
 class NoteEditViewModel(
     savedStateHandle: SavedStateHandle,
@@ -39,14 +41,23 @@ class NoteEditViewModel(
     private val route = savedStateHandle.toRoute<NoteEditRoute>()
     private var original: Note? = null
 
-    private val _state = MutableStateFlow(NoteEditState(isNew = route.noteId == 0L, loading = route.noteId != 0L))
-    val state: StateFlow<NoteEditState> = _state.asStateFlow()
+    private val _state: MutableStateFlow<NoteEditState>
+    val state: StateFlow<NoteEditState>
 
     init {
+        val (form, restored) = savedStateHandle.savedForm(
+            KEY_FORM,
+            NoteEditState(isNew = route.noteId == 0L, loading = route.noteId != 0L),
+            usable = { !it.loading && !it.done },
+        )
+        _state = form
+        state = form.asStateFlow()
+
         if (route.noteId != 0L) {
             viewModelScope.launch {
                 val note = repository.get(route.noteId)
                 original = note
+                if (note != null && restored) return@launch // keep what the user had typed
                 _state.value = if (note == null) {
                     NoteEditState(isNew = false, loading = false, done = true)
                 } else {
@@ -86,6 +97,8 @@ class NoteEditViewModel(
     }
 
     companion object {
+        private const val KEY_FORM = "form"
+
         val Factory = appViewModelFactory { c, handle -> NoteEditViewModel(handle, c.noteRepository) }
     }
 }

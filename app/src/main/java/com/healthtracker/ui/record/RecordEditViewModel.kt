@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.healthtracker.data.SettingsRepository
 import com.healthtracker.data.local.HealthRecord
 import com.healthtracker.data.repository.HealthRecordRepository
 import com.healthtracker.domain.Field
@@ -16,12 +17,15 @@ import com.healthtracker.domain.ValidationResult
 import com.healthtracker.domain.formatNumber
 import com.healthtracker.domain.spec
 import com.healthtracker.ui.appViewModelFactory
+import com.healthtracker.ui.savedForm
 import com.healthtracker.ui.navigation.RecordEditRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.Serializable
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -43,27 +47,41 @@ data class RecordEditState(
     val note: String = "",
     val errors: Map<Field, String> = emptyMap(),
     val done: Boolean = false,
-)
+) : Serializable
 
 class RecordEditViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: HealthRecordRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<RecordEditRoute>()
     private var original: HealthRecord? = null
 
-    private val _state = MutableStateFlow(
-        RecordEditState(
-            // When editing, the real type arrives with the record; BLOOD_PRESSURE is only a placeholder.
-            type = route.type?.let(RecordType::valueOf) ?: RecordType.BLOOD_PRESSURE,
-            isNew = route.recordId == 0L,
-            loading = route.recordId != 0L,
-        ),
-    )
-    val state: StateFlow<RecordEditState> = _state.asStateFlow()
+    private val _state: MutableStateFlow<RecordEditState>
+    val state: StateFlow<RecordEditState>
 
     init {
+        val (form, restored) = savedStateHandle.savedForm(
+            KEY_FORM,
+            RecordEditState(
+                // When editing, the real type arrives with the record; BLOOD_PRESSURE is only a placeholder.
+                type = route.type?.let(RecordType::valueOf) ?: RecordType.BLOOD_PRESSURE,
+                isNew = route.recordId == 0L,
+                loading = route.recordId != 0L,
+            ),
+            usable = { !it.loading && !it.done },
+        )
+        _state = form
+        state = form.asStateFlow()
+
+        if (route.recordId == 0L && !restored) {
+            // New records start in the units chosen in Settings.
+            viewModelScope.launch {
+                val unit = settingsRepository.settings.first().preferredUnit(_state.value.type)
+                _state.update { if (unit in it.type.spec.units) it.copy(unit = unit) else it }
+            }
+        }
         if (route.recordId != 0L) {
             viewModelScope.launch {
                 val record = repository.get(route.recordId)
@@ -72,6 +90,7 @@ class RecordEditViewModel(
                     return@launch
                 }
                 original = record
+                if (restored) return@launch // keep what the user had typed
                 val local = record.dateTime.atZone(ZoneId.systemDefault()).toLocalDateTime()
                 _state.value = RecordEditState(
                     type = record.type,
@@ -142,6 +161,8 @@ class RecordEditViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactory { c, handle -> RecordEditViewModel(handle, c.recordRepository) }
+        private const val KEY_FORM = "form"
+
+        val Factory = appViewModelFactory { c, handle -> RecordEditViewModel(handle, c.recordRepository, c.settingsRepository) }
     }
 }

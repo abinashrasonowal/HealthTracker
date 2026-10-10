@@ -35,3 +35,10 @@ data class MedicationEditRoute(val personId: Long, val medicationId: Long = 0)
 
 @Serializable
 data class MedicationDetailRoute(val medicationId: Long)
+
+@Serializable
+object SettingsRoute
+
+/** [personId] of 0 means "pick for me" (the first person). */
+@Serializable
+data class ExportRoute(val personId: Long = 0)

@@ -101,11 +101,18 @@ fun TrendChart(
             val text = measurer.measure(formatNumber(t), labelStyle)
             drawText(text, topLeft = Offset(plotLeft - text.size.width - 6.dp.toPx(), ty - text.size.height / 2))
         }
-        // Start, middle and end dates of the range.
-        listOf(0f, 0.5f, 1f).forEach { f ->
+        // Start, middle and end dates of the range; the middle one is dropped when they'd collide (large text).
+        val dateLabels = listOf(0f, 0.5f, 1f).map { f ->
             val instant = trend.start.plusMillis(((trend.end.toEpochMilli() - trend.start.toEpochMilli()) * f).toLong())
             val text = measurer.measure(instant.atZone(zone).format(axisDateFormat), labelStyle)
             val tx = (plotLeft + (plotRight - plotLeft) * f - text.size.width * f).coerceAtLeast(plotLeft)
+            tx to text
+        }
+        val gap = 8.dp.toPx()
+        val (first, middle, last) = dateLabels
+        val middleFits = first.first + first.second.size.width + gap < middle.first &&
+            middle.first + middle.second.size.width + gap < last.first
+        (if (middleFits) dateLabels else listOf(first, last)).forEach { (tx, text) ->
             drawText(text, topLeft = Offset(tx, plotBottom + 6.dp.toPx()))
         }
 

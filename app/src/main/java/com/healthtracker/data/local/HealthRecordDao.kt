@@ -2,10 +2,12 @@ package com.healthtracker.data.local
 
 import androidx.room.Dao
 import androidx.room.Delete
+import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Upsert
 import com.healthtracker.domain.RecordType
 import kotlinx.coroutines.flow.Flow
+import java.time.Instant
 
 @Dao
 interface HealthRecordDao {
@@ -50,6 +52,22 @@ interface HealthRecordDao {
 
     @Query("SELECT COUNT(*) FROM health_records WHERE personId = :personId")
     suspend fun countForPerson(personId: Long): Int
+
+    /** Readings in [from, to), newest first. */
+    @Query(
+        """
+        SELECT * FROM health_records
+        WHERE personId = :personId AND type IN (:types) AND dateTime >= :from AND dateTime < :to
+        ORDER BY dateTime DESC, id DESC
+        """,
+    )
+    suspend fun getForExport(personId: Long, types: List<RecordType>, from: Instant, to: Instant): List<HealthRecord>
+
+    @Query("SELECT * FROM health_records ORDER BY id")
+    suspend fun getAll(): List<HealthRecord>
+
+    @Insert
+    suspend fun insertAll(records: List<HealthRecord>)
 
     @Upsert
     suspend fun upsert(record: HealthRecord): Long

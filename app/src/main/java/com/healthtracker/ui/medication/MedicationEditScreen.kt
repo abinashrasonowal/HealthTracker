@@ -32,6 +32,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -73,7 +76,14 @@ fun MedicationEditScreen(
             return@Scaffold
         }
         val nameFocus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { if (state.isNew) nameFocus.requestFocus() }
+        // Focus the first field once; not again after a rotation, which would move the cursor back.
+        var focused by rememberSaveable { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            if (state.isNew && !focused) {
+                nameFocus.requestFocus()
+                focused = true
+            }
+        }
 
         Column(
             modifier = Modifier

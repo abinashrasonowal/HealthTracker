@@ -2,9 +2,11 @@ package com.healthtracker.data.local
 
 import androidx.room.Dao
 import androidx.room.Delete
+import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
+import java.time.Instant
 
 @Dao
 interface NoteDao {
@@ -29,6 +31,20 @@ interface NoteDao {
 
     @Query("SELECT COUNT(*) FROM notes WHERE personId = :personId")
     suspend fun countForPerson(personId: Long): Int
+
+    @Query(
+        """
+        SELECT * FROM notes WHERE personId = :personId AND dateTime >= :from AND dateTime < :to
+        ORDER BY dateTime DESC, id DESC
+        """,
+    )
+    suspend fun getForExport(personId: Long, from: Instant, to: Instant): List<Note>
+
+    @Query("SELECT * FROM notes ORDER BY id")
+    suspend fun getAll(): List<Note>
+
+    @Insert
+    suspend fun insertAll(notes: List<Note>)
 
     @Upsert
     suspend fun upsert(note: Note): Long

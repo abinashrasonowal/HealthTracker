@@ -29,6 +29,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -38,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.healthtracker.ui.components.DateField
+import com.healthtracker.ui.components.FieldPair
 import com.healthtracker.ui.components.TimeField
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,7 +73,14 @@ fun NoteEditScreen(
             return@Scaffold
         }
         val titleFocus = remember { FocusRequester() }
-        LaunchedEffect(Unit) { if (state.isNew) titleFocus.requestFocus() }
+        // Focus the first field once; not again after a rotation, which would move the cursor back.
+        var focused by rememberSaveable { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            if (state.isNew && !focused) {
+                titleFocus.requestFocus()
+                focused = true
+            }
+        }
 
         Column(
             modifier = Modifier
@@ -90,10 +101,10 @@ fun NoteEditScreen(
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth().focusRequester(titleFocus),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                DateField("Date", state.date, viewModel::onDateChange, Modifier.weight(1f))
-                TimeField("Time", state.time, viewModel::onTimeChange, Modifier.weight(1f))
-            }
+            FieldPair(
+                { DateField("Date", state.date, viewModel::onDateChange, it) },
+                { TimeField("Time", state.time, viewModel::onTimeChange, it) },
+            )
             OutlinedTextField(
                 value = state.content,
                 onValueChange = viewModel::onContentChange,

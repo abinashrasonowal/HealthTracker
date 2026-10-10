@@ -60,6 +60,13 @@ class TrendsTest {
     }
 
     @Test
+    fun `preferred unit wins when it applies to the type`() {
+        val readings = listOf(TrendInput(daysAgo(1), 70.0, null, MeasureUnit.KG))
+        assertEquals(MeasureUnit.LB, Trends.build(RecordType.WEIGHT, readings, TrendRange.WEEK, now, MeasureUnit.LB)!!.unit)
+        assertEquals(MeasureUnit.KG, Trends.build(RecordType.WEIGHT, readings, TrendRange.WEEK, now, MeasureUnit.CELSIUS)!!.unit)
+    }
+
+    @Test
     fun `unit conversions`() {
         assertEquals(37.0, Trends.convert(98.6, MeasureUnit.FAHRENHEIT, MeasureUnit.CELSIUS), 1e-9)
         assertEquals(5.5, Trends.convert(99.0, MeasureUnit.MG_DL, MeasureUnit.MMOL_L), 1e-9)

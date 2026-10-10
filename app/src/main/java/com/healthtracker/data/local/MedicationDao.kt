@@ -2,6 +2,7 @@ package com.healthtracker.data.local
 
 import androidx.room.Dao
 import androidx.room.Delete
+import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +18,20 @@ interface MedicationDao {
         """,
     )
     fun observeForPerson(personId: Long): Flow<List<Medication>>
+
+    @Query(
+        """
+        SELECT * FROM medications WHERE personId = :personId
+        ORDER BY startDate IS NULL, startDate DESC, name COLLATE NOCASE
+        """,
+    )
+    suspend fun getForPerson(personId: Long): List<Medication>
+
+    @Query("SELECT * FROM medications ORDER BY id")
+    suspend fun getAll(): List<Medication>
+
+    @Insert
+    suspend fun insertAll(medications: List<Medication>)
 
     @Query("SELECT * FROM medications WHERE id = :id")
     fun observe(id: Long): Flow<Medication?>
